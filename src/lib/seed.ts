@@ -16,6 +16,8 @@ type SeedShirt = {
   wash: string;
   accent: string;
   captions: string[];
+  /** Committed paths under /uploads/seed — skips SVG placeholders when set */
+  image_paths?: string[];
 };
 
 export const SEED: SeedShirt[] = [
@@ -235,6 +237,26 @@ export const SEED: SeedShirt[] = [
     accent: "#f3ead8",
     captions: ["COL. 13", "IVOIRE", "M / L"],
   },
+  {
+    slug: "cart-city-tee-black",
+    title: "Cart City Tee — Black",
+    short_line: "Made to order · Brisbane",
+    story: "Full-front Cart City print on a black AS Colour Staple. Gold leaf + carts + BLOCKSCAN smoke. No CARTAHOLICS wordmark. Printed to order in Brisbane (DTF) — not the gig-only metallic screen run. Soft / coming soon until the sample passes. Made to order · ships from Brisbane after print. SKU CC-TEE-5001-BLK-MTO. Waitlist open.",
+    type: "handmade",
+    condition: "unworn",
+    fabric: "AS Colour Staple Tee 5001",
+    colour: "Black",
+    price_cents: 7000,
+    sizes: [{ size: "S", stock: 0 }],
+    wash: "#0a0a0a",
+    accent: "#DAB437",
+    captions: ["MTO", "BLACK", "S · SOON"],
+    image_paths: [
+      "/uploads/seed/cart-city-tee-black-1.png",
+      "/uploads/seed/cart-city-tee-black-2.png",
+      "/uploads/seed/cart-city-tee-black-3.png",
+    ],
+  },
 ];
 
 function shirtSvg(opts: {
@@ -293,6 +315,10 @@ export function writeSeedImages(): Map<string, string[]> {
   fs.mkdirSync(dir, { recursive: true });
   const map = new Map<string, string[]>();
   for (const shirt of SEED) {
+    if (shirt.image_paths && shirt.image_paths.length > 0) {
+      map.set(shirt.slug, shirt.image_paths);
+      continue;
+    }
     const paths: string[] = [];
     shirt.captions.forEach((caption, i) => {
       const file = `${shirt.slug}-${i + 1}.svg`;
@@ -316,8 +342,6 @@ export function writeSeedImages(): Map<string, string[]> {
 }
 
 export function seedIfEmpty(db: Database.Database) {
-  const row = db.prepare("SELECT COUNT(*) AS n FROM products").get() as { n: number };
-  if (row.n > 0) return;
   const images = writeSeedImages();
   const insertP = db.prepare(`
     INSERT INTO products (slug, title, short_line, story, type, condition, fabric, colour, price_cents, created_at, updated_at)
@@ -325,9 +349,11 @@ export function seedIfEmpty(db: Database.Database) {
   `);
   const insertI = db.prepare(`INSERT INTO product_images (product_id, path, sort) VALUES (?, ?, ?)`);
   const insertS = db.prepare(`INSERT INTO product_sizes (product_id, size, stock) VALUES (?, ?, ?)`);
+  const exists = db.prepare("SELECT id FROM products WHERE slug = ?");
   const now = new Date().toISOString();
   const tx = db.transaction(() => {
     for (const shirt of SEED) {
+      if (exists.get(shirt.slug)) continue;
       const info = insertP.run({ ...shirt, now });
       const id = Number(info.lastInsertRowid);
       (images.get(shirt.slug) || []).forEach((p, i) => insertI.run(id, p, i));
