@@ -22,7 +22,7 @@ const sans = Oswald({
 
 export const metadata: Metadata = {
   title: "Cartaholics",
-  description: "The body moved on. The cloth did not. Archive 01 — shirts. Pickup in Brisbane / Meanjin.",
+  description: "Cartaholics — shirts.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
