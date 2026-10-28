@@ -17,12 +17,12 @@ export function ProductCard({ product }: { product: Product }) {
           <div style={{ width: "100%", height: "100%", background: "#110e0c" }} />
         )}
         {sold ? <span className="sold-mark">gone</span> : null}
-        <div className="card-meta">
-          <h2 className="card-title">{product.title}</h2>
-          <div className="card-row">
-            <span>{formatAUD(product.price_cents)}</span>
-            <span className={sold ? "gone" : undefined}>{sold ? "gone" : sizes}</span>
-          </div>
+      </div>
+      <div className="card-meta">
+        <h2 className="card-title">{product.title}</h2>
+        <div className="card-row">
+          <span>{formatAUD(product.price_cents)}</span>
+          <span className={sold ? "gone" : undefined}>{sold ? "gone" : sizes}</span>
         </div>
       </div>
     </Link>

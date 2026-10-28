@@ -33,11 +33,5 @@ export function Footer() {
   const path = usePathname();
   const hide = path.startsWith("/order/");
   if (hide) return null;
-  return (
-    <footer className="footer no-print">
-      <span>01 shirts</span>
-      <span>meanjin</span>
-      <span className="ornament">/</span>
-    </footer>
-  );
+  return <footer className="footer no-print" aria-hidden="true" />;
 }
