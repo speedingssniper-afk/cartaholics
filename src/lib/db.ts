@@ -136,7 +136,8 @@ export function listProducts(filters: ArchiveFilters = {}): Product[] {
 }
 
 export function featuredProducts(limit = 4): Product[] {
-  return listProducts({ availability: "in-stock" }).slice(0, limit);
+  // Include soft / sold-out pieces so waitlist listings still appear on home
+  return listProducts().slice(0, limit);
 }
 
 export function getProduct(id: number): Product | null {
