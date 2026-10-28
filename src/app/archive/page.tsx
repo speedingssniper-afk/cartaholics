@@ -31,7 +31,7 @@ export default async function ArchivePage({
         <h1>
           Shirts.
         </h1>
-        <p className="lede">Pieces that stayed when the body did not. Sold stays listed.</p>
+        <p className="lede">Pieces that stayed when the body did not. Gone stays listed.</p>
         <form className="filters" method="get">
           <select name="size" defaultValue={filters.size || ""} aria-label="Size">
             <option value="">Size</option>
@@ -57,7 +57,7 @@ export default async function ArchivePage({
           <select name="availability" defaultValue={filters.availability || ""} aria-label="Availability">
             <option value="">Availability</option>
             <option value="in-stock">In stock</option>
-            <option value="sold-out">Sold out</option>
+            <option value="sold-out">Gone</option>
           </select>
           <select name="price" defaultValue={filters.price || ""} aria-label="Price">
             <option value="">Price</option>

@@ -70,7 +70,7 @@ export function PieceActions({ product }: { product: Product }) {
       </div>
       {allGone || gone ? (
         <>
-          <p className="sold-banner">Sold</p>
+          <p className="sold-banner">gone</p>
           {waited ? (
             <p className="notice">Noted. If it returns, you will hear.</p>
           ) : (

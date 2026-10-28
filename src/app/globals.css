@@ -280,16 +280,19 @@ main { flex: 1; }
 .card:nth-child(even) .frame img { object-position: 50% 72%; }
 .sold-mark {
   position: absolute;
-  top: 12%;
-  right: 8%;
-  font-family: var(--sans);
-  font-size: 0.7rem;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: var(--ivory);
-  background: var(--oxblood);
-  padding: 0.35rem 0.5rem;
-  transform: rotate(-9deg);
+  top: 10%;
+  right: 7%;
+  font-family: var(--display);
+  font-style: italic;
+  font-size: 0.95rem;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-transform: lowercase;
+  color: var(--ivory-dim);
+  background: transparent;
+  padding: 0;
+  opacity: 0.72;
+  transform: none;
   z-index: 3;
 }
 .card-meta {
@@ -323,7 +326,7 @@ main { flex: 1; }
   text-transform: uppercase;
   color: var(--brass);
 }
-.card-row .gone { color: var(--oxblood-bright); }
+.card-row .gone { color: var(--ivory-dim); opacity: 0.85; font-style: italic; text-transform: lowercase; letter-spacing: 0.14em; }
 
 .archive-top {
   padding: 2.4rem 0.55rem 0.7rem;
@@ -522,11 +525,13 @@ main { flex: 1; }
 .btn.ghost { border-color: var(--hair); color: var(--ivory-dim); }
 
 .sold-banner {
-  color: var(--oxblood-bright);
-  font-family: var(--sans);
-  letter-spacing: 0.35em;
-  text-transform: uppercase;
-  font-size: 0.72rem;
+  color: var(--ivory-dim);
+  font-family: var(--display);
+  font-style: italic;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  font-size: 1.15rem;
+  opacity: 0.78;
   margin: 0.8rem 0;
 }
 
