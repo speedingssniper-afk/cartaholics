@@ -65,24 +65,80 @@ function fillNoise(ctx: CanvasRenderingContext2D, w: number, h: number, seed: nu
   ctx.restore();
 }
 
+/** Draw product / gallery images with object-fit: contain into the capture. */
+function drawContainedImage(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  dx: number,
+  dy: number,
+  dw: number,
+  dh: number
+) {
+  const nw = img.naturalWidth;
+  const nh = img.naturalHeight;
+  if (!nw || !nh || dw < 1 || dh < 1) return;
+  const scale = Math.min(dw / nw, dh / nh);
+  const tw = nw * scale;
+  const th = nh * scale;
+  const ox = dx + (dw - tw) / 2;
+  const oy = dy + (dh - th) / 2;
+  ctx.drawImage(img, ox, oy, tw, th);
+}
+
 function capture(dst: HTMLCanvasElement, w: number, h: number, sx: number, sy: number) {
   const ctx = dst.getContext("2d", { alpha: false });
   if (!ctx) return;
   ctx.fillStyle = VOID;
   ctx.fillRect(0, 0, w, h);
 
-  const imgs = document.querySelectorAll("img");
-  for (let i = 0; i < imgs.length; i++) {
-    const img = imgs[i];
-    if (!(img instanceof HTMLImageElement) || !img.naturalWidth) continue;
-    const r = img.getBoundingClientRect();
-    if (r.width < 6 || r.height < 6) continue;
-    if (r.bottom < 0 || r.right < 0 || r.top > window.innerHeight || r.left > window.innerWidth) continue;
-    try {
-      ctx.drawImage(img, r.left * sx, r.top * sy, r.width * sx, r.height * sy);
-    } catch {
-      ctx.fillStyle = "#1a1210";
+  // Prefer product frames so shirt ground + tee land in the capture.
+  const frames = document.querySelectorAll(".card .frame, .gallery .frame");
+  if (frames.length) {
+    for (let i = 0; i < frames.length; i++) {
+      const frame = frames[i];
+      if (!(frame instanceof HTMLElement)) continue;
+      const r = frame.getBoundingClientRect();
+      if (r.width < 6 || r.height < 6) continue;
+      if (r.bottom < 0 || r.right < 0 || r.top > window.innerHeight || r.left > window.innerWidth) {
+        continue;
+      }
+      const cs = getComputedStyle(frame);
+      ctx.fillStyle = cs.backgroundColor || "#c4b6a0";
       ctx.fillRect(r.left * sx, r.top * sy, r.width * sx, r.height * sy);
+      const img = frame.querySelector("img");
+      if (img instanceof HTMLImageElement && img.naturalWidth) {
+        const ir = img.getBoundingClientRect();
+        try {
+          drawContainedImage(
+            ctx,
+            img,
+            ir.left * sx,
+            ir.top * sy,
+            ir.width * sx,
+            ir.height * sy
+          );
+        } catch {
+          ctx.fillStyle = "#1a1210";
+          ctx.fillRect(ir.left * sx, ir.top * sy, ir.width * sx, ir.height * sy);
+        }
+      }
+    }
+  } else {
+    const imgs = document.querySelectorAll("img");
+    for (let i = 0; i < imgs.length; i++) {
+      const img = imgs[i];
+      if (!(img instanceof HTMLImageElement) || !img.naturalWidth) continue;
+      const r = img.getBoundingClientRect();
+      if (r.width < 6 || r.height < 6) continue;
+      if (r.bottom < 0 || r.right < 0 || r.top > window.innerHeight || r.left > window.innerWidth) {
+        continue;
+      }
+      try {
+        drawContainedImage(ctx, img, r.left * sx, r.top * sy, r.width * sx, r.height * sy);
+      } catch {
+        ctx.fillStyle = "#1a1210";
+        ctx.fillRect(r.left * sx, r.top * sy, r.width * sx, r.height * sy);
+      }
     }
   }
 
@@ -98,6 +154,10 @@ function capture(dst: HTMLCanvasElement, w: number, h: number, sx: number, sy: n
     ctx.fillRect(r.left * sx, r.top * sy, r.width * sx, Math.max(2, r.height * sy * 0.72));
   }
   ctx.restore();
+}
+
+function easeOutCubic(t: number) {
+  return 1 - Math.pow(1 - t, 3);
 }
 
 function mosh(
@@ -116,25 +176,44 @@ function mosh(
   ctx.globalAlpha = 1;
   ctx.imageSmoothingEnabled = false;
 
-  if (mode === "enter" && t < 0.22) {
-    fillNoise(ctx, w, h, (t * 97) | 0);
-    ctx.globalAlpha = t / 0.22;
-    ctx.drawImage(clean, 0, 0);
-    ctx.globalAlpha = 1;
+  if (mode === "enter") {
+    // Heavy noise → shirt emerges through crush → resolve.
+    const reveal = easeOutCubic(Math.min(1, t / 0.55));
+    fillNoise(ctx, w, h, ((t * 140) | 0) + 3);
+    // Pixel-crush the clean frame harder early, softer later.
+    const crushAmt = Math.max(0.04, 0.06 + (1 - reveal) * 0.72);
+    const cw = Math.max(8, Math.floor(w * crushAmt));
+    const ch = Math.max(8, Math.floor(h * crushAmt));
+    crush.width = cw;
+    crush.height = ch;
+    const cctx = crush.getContext("2d", { alpha: false });
+    if (cctx) {
+      cctx.imageSmoothingEnabled = false;
+      cctx.drawImage(clean, 0, 0, cw, ch);
+      ctx.globalAlpha = 0.18 + reveal * 0.82;
+      ctx.drawImage(crush, 0, 0, cw, ch, 0, 0, w, h);
+      ctx.globalAlpha = 1;
+    }
+    // Soft full-res shirt fade in the last third so it doesn't pop late.
+    if (t > 0.42) {
+      const soft = easeOutCubic(Math.min(1, (t - 0.42) / 0.58));
+      ctx.globalAlpha = soft * 0.55;
+      ctx.drawImage(clean, 0, 0);
+      ctx.globalAlpha = 1;
+    }
   } else {
     ctx.drawImage(clean, 0, 0);
-  }
-
-  const crushAmt = Math.max(0.08, 0.1 + (1 - intensity) * 0.55);
-  const cw = Math.max(12, Math.floor(w * crushAmt));
-  const ch = Math.max(12, Math.floor(h * crushAmt));
-  crush.width = cw;
-  crush.height = ch;
-  const cctx = crush.getContext("2d", { alpha: false });
-  if (cctx) {
-    cctx.imageSmoothingEnabled = false;
-    cctx.drawImage(live, 0, 0, cw, ch);
-    ctx.drawImage(crush, 0, 0, cw, ch, 0, 0, w, h);
+    const crushAmt = Math.max(0.08, 0.1 + (1 - intensity) * 0.55);
+    const cw = Math.max(12, Math.floor(w * crushAmt));
+    const ch = Math.max(12, Math.floor(h * crushAmt));
+    crush.width = cw;
+    crush.height = ch;
+    const cctx = crush.getContext("2d", { alpha: false });
+    if (cctx) {
+      cctx.imageSmoothingEnabled = false;
+      cctx.drawImage(live, 0, 0, cw, ch);
+      ctx.drawImage(crush, 0, 0, cw, ch, 0, 0, w, h);
+    }
   }
 
   const strips = 7 + Math.floor(18 * intensity);
@@ -213,6 +292,42 @@ function mosh(
   }
 }
 
+function waitForProductImages(timeoutMs = 1400): Promise<void> {
+  const nodes = Array.from(
+    document.querySelectorAll<HTMLImageElement>(".card img, .gallery img, main img")
+  );
+  if (!nodes.length) return Promise.resolve();
+  const pending = nodes.filter((img) => !img.complete || !img.naturalWidth);
+  if (!pending.length) return Promise.resolve();
+
+  return new Promise((resolve) => {
+    const seen = new Set<HTMLImageElement>();
+    let settled = false;
+    const finishOne = (img: HTMLImageElement) => {
+      if (settled || seen.has(img)) return;
+      seen.add(img);
+      if (seen.size >= pending.length) {
+        settled = true;
+        window.clearTimeout(timer);
+        resolve();
+      }
+    };
+    const timer = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    }, timeoutMs);
+    for (const img of pending) {
+      const onLoad = () => finishOne(img);
+      img.addEventListener("load", onLoad, { once: true });
+      img.addEventListener("error", onLoad, { once: true });
+      if (typeof img.decode === "function") {
+        img.decode().then(() => finishOne(img)).catch(() => finishOne(img));
+      }
+    }
+  });
+}
+
 function play(canvas: HTMLCanvasElement, mode: Mode): Run {
   let alive = true;
   let raf = 0;
@@ -248,7 +363,7 @@ function play(canvas: HTMLCanvasElement, mode: Mode): Run {
   }
 
   const dur =
-    mode === "enter" ? 520 + Math.random() * 360 : 360 + Math.random() * 220;
+    mode === "enter" ? 780 + Math.random() * 320 : 360 + Math.random() * 220;
   const t0ms = performance.now();
 
   const tick = (now: number) => {
@@ -256,11 +371,11 @@ function play(canvas: HTMLCanvasElement, mode: Mode): Run {
     const t = Math.min(1, (now - t0ms) / dur);
     const intensity =
       mode === "enter"
-        ? t < 0.18
+        ? t < 0.22
           ? 1
-          : t < 0.72
-            ? 0.85
-            : Math.max(0, 1 - (t - 0.72) / 0.28)
+          : t < 0.68
+            ? 0.78
+            : Math.max(0, 1 - (t - 0.68) / 0.32)
         : Math.max(0.12, 1 - t * 0.92);
     mosh(liveCtx, canvas, clean, trail, crush, w, h, intensity, t, mode);
     if (t >= 1) {
@@ -314,10 +429,15 @@ export function Datamosh() {
       return;
     }
 
+    let cancelled = false;
     const path = window.location.pathname;
     if (!path.startsWith("/order/") && !path.startsWith("/dispatch")) {
-      run.current?.abort();
-      run.current = play(canvas, "enter");
+      // Wait for shirt imgs so enter capture includes the tee, not void.
+      waitForProductImages().then(() => {
+        if (cancelled || !ref.current) return;
+        run.current?.abort();
+        run.current = play(ref.current, "enter");
+      });
     }
 
     const onClick = (e: MouseEvent) => {
@@ -333,6 +453,7 @@ export function Datamosh() {
 
     document.addEventListener("click", onClick, true);
     return () => {
+      cancelled = true;
       document.removeEventListener("click", onClick, true);
       run.current?.abort();
       run.current = null;
